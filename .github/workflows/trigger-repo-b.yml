@@ -3,7 +3,10 @@ name: Trigger Repo B CI
 on:
   push:
     branches:
-      - main   # 👈 branch you care about
+      - master
+  pull_request:
+    branches:
+      - master
 
 jobs:
   trigger:
@@ -15,4 +18,10 @@ jobs:
           -H "Accept: application/vnd.github+json" \
           -H "Authorization: Bearer ${{ secrets.REPO_B_PAT }}" \
           https://api.github.com/repos/YousseffHassaan/Repo-B/dispatches  \
-          -d '{"event_type":"run-tests"}'
+          -d '{
+              "event_type":"run-tests",
+              "client_payload":{
+              "sha":"${{ github.sha }}",
+              "repo":"${{ github.repository }}"
+                }
+              }'
