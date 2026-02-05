@@ -1,0 +1,54 @@
+name: PR Automation Tests
+
+on:
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch: # manual trigger
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '22'
+          cache: 'maven'
+
+      - name: Run Tests
+        env:
+          TEST_EMAIL: ${{ secrets.TEST_EMAIL }}
+          TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
+        run: |
+          echo "Running tests with secure credentials..."
+          mvn -B test
+
+      - name: Upload Test Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-reports
+          path: target/surefire-reports/
+
+      - name: Notify Teams - Success
+        if: success()
+        run: |
+          curl -H "Content-Type: application/json" \
+          -d "{
+            \"text\": \"✅ PR Automation PASSED\nRepo: ${{ github.repository }}\nPR: #${{ github.event.pull_request.number }}\nBranch: ${{ github.head_ref }}\"
+          }" \
+          ${{ secrets.TEAMS_WEBHOOK_URL }}
+
+      - name: Notify Teams - Failure
+        if: failure()
+        run: |
+          curl -H "Content-Type: application/json" \
+          -d "{
+            \"text\": \"❌ PR Automation FAILED\nRepo: ${{ github.repository }}\nPR: #${{ github.event.pull_request.number }}\nBranch: ${{ github.head_ref }}\"
+          }" \
+          ${{ secrets.TEAMS_WEBHOOK_URL }}
